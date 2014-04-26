@@ -132,6 +132,7 @@ class CPushMod : public CModule
 			defaults["message_length"] = "100";
 			defaults["message_title"] = "{title}";
 			defaults["message_uri"] = "";
+			defaults["message_uri_markasread"] = "";
 			defaults["message_uri_post"] = "no";
 			defaults["message_uri_title"] = "";
 			defaults["message_priority"] = "0";
@@ -150,6 +151,7 @@ class CPushMod : public CModule
 			// Advanced
 			defaults["channel_conditions"] = "all";
 			defaults["query_conditions"] = "all";
+			defaults["mark_asread"] = "no";
 			defaults["debug"] = "off";
 		}
 

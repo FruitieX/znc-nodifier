@@ -286,6 +286,12 @@ to something similar to "http://domain/#channel/2011-03-09 14:25:09", or
     local scheme to access a mobile application.  Keyword expansion is performed on this
     value.
 
+*   `message_uri_markasread = ""`
+
+    URI that a markasread message will be sent to while using the custom URL service.
+    Keyword expansion is performed on this value. Only used if the mark_asread option is
+    enabled.
+
 *   `message_uri_post = "no"`
 
     When using the custom URL service, this option allows you to specify whether to use the
@@ -421,6 +427,12 @@ to something similar to "http://domain/#channel/2011-03-09 14:25:09", or
 
     This option is more or less identical to `channel_conditions`, except that it is used
     to filter notifications for private messages.
+
+*   `mark_asread = "no"`
+
+    When set to "yes" and while using the custom URL service, this option enables sending
+    a custom message to "message_uri_markasread" when the user has replied to any of the
+    channels where a highlight has occurred.
 
 *   `debug = "off"`
 
