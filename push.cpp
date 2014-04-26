@@ -210,6 +210,143 @@ class CPushMod : public CModule
 		}
 
 		/**
+		 * Mark all messages from given context as read.
+		 * Currently only works with the custom URL service.
+		 * Requires (and assumes) that the user has already configured their
+		 * username and API secret using the 'set' command.
+		 *
+		 * @param context Channel or nick context
+		 */
+		void mark_context_asread(const CString context="*push")
+		{
+			// Generate an ISO8601 date string
+			time_t rawtime;
+			struct tm * timeinfo;
+			time(&rawtime);
+			timeinfo = localtime(&rawtime);
+			char iso8601 [20];
+			strftime(iso8601, 20, "%Y-%m-%d %H:%M:%S", timeinfo);
+
+			// Message string replacements
+			MCString replace;
+			replace["{context}"] = context;
+			replace["{datetime}"] = CString(iso8601);
+			replace["{unixtime}"] = CString(time(NULL));
+			replace["{username}"] = options["username"];
+			replace["{secret}"] = options["secret"];
+
+			// Set up the connection profile
+			CString service = options["service"];
+			bool use_post = true;
+			int use_port = 443;
+			bool use_ssl = true;
+			CString service_host;
+			CString service_url;
+			CString service_auth;
+			MCString params;
+
+			if (service == "url")
+			{
+				if (options["message_uri_markasread"] == "")
+				{
+					PutModule("Error: message_uri_markasread not set");
+					return;
+				}
+
+				CString::size_type count;
+				VCString parts;
+				CString url = options["message_uri_markasread"];
+
+				// Verify that the URL begins with either http:// or https://
+				count = url.Split("://", parts, false);
+
+				if (count != 2)
+				{
+					PutModule("Error: invalid url format");
+					return;
+				}
+
+				if(options["message_uri_post"] != "yes")
+				{
+					use_post = false;
+				}
+
+				if (parts[0] == "https")
+				{
+					use_ssl = true;
+					use_port = 443;
+				}
+				else if (parts[0] == "http")
+				{
+					use_ssl = false;
+					use_port = 80;
+				}
+				else
+				{
+					PutModule("Error: invalid url schema");
+					return;
+				}
+
+				// HTTP basic auth
+				if(options["username"] != "" || options["secret"] != "")
+				{
+					service_auth = options["username"] + CString(":") + options["secret"];
+				}
+
+				// Process the remaining portion of the URL
+				url = parts[1];
+
+				// Split out the host and optional port number; this breaks with raw IPv6 addresses
+				CString host = url.Token(0, false, "/");
+				count = host.Split(":", parts, false);
+
+				if (count > 1)
+				{
+					use_port = parts[1].ToInt();
+				}
+
+				service_host = parts[0];
+
+				// Split remaining URL into path and query components
+				url = "/" + url.Token(1, true, "/");
+				service_url = expand(url.Token(0, false, "?"), replace);
+
+				// Parse and expand query parameter values
+				url = url.Token(1, true, "?");
+				url.URLSplit(params);
+
+				for (MCString::iterator i = params.begin(); i != params.end(); i++) {
+					i->second = expand(i->second, replace);
+				}
+			}
+			else
+			{
+				PutModule("Error: service type not selected");
+				return;
+			}
+
+			PutDebug("service: " + service);
+			PutDebug("service_host: " + service_host);
+			PutDebug("service_url: " + service_url);
+			PutDebug("service_auth: " + service_auth);
+			PutDebug("use_port: " + CString(use_port));
+			PutDebug("use_ssl: " + CString(use_ssl ? 1 : 0));
+			PutDebug("use_post: " + CString(use_post ? 1 : 0));
+
+#ifdef USE_CURL
+			PutDebug("using libcurl");
+			make_curl_request(service_host, service_url, service_auth, params, use_port, use_ssl, use_post, options["debug"] == "on");
+#else
+			PutDebug("NOT using libcurl");
+			// Create the socket connection, write to it, and add it to the queue
+			CPushSocket *sock = new CPushSocket(this);
+			sock->Connect(service_host, use_port, use_ssl);
+			sock->Request(use_post, service_host, service_url, params, service_auth);
+			AddSocket(sock);
+#endif
+		}
+
+		/**
 		 * Send a message to the currently-configured push service.
 		 * Requires (and assumes) that the user has already configured their
 		 * username and API secret using the 'set' command.
@@ -1020,6 +1157,12 @@ class CPushMod : public CModule
 		EModRet OnUserMsg(CString& target, CString& message)
 		{
 			last_reply_time[target] = last_active_time[target] = idle_time = time(NULL);
+
+			if(options["mark_asread"] == "yes")
+			{
+				mark_context_asread(target);
+			}
+
 			return CONTINUE;
 		}
 
