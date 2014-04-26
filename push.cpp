@@ -128,7 +128,7 @@ class CPushMod : public CModule
 			defaults["target"] = "";
 
 			// Notification settings
-			defaults["message_content"] = "{message}";
+			defaults["message_content"] = "{context}:{nick} {message}";
 			defaults["message_length"] = "100";
 			defaults["message_title"] = "{title}";
 			defaults["message_uri"] = "";
@@ -1078,11 +1078,8 @@ class CPushMod : public CModule
 			if (notify_channel(nick, channel, message))
 			{
 				CString title = "Highlight";
-				CString msg = channel.GetName();
-				msg += ": [" + nick.GetNick();
-				msg += "] " + message;
 
-				send_message(msg, title, channel.GetName());
+				send_message(message, title, channel.GetName(), nick.GetNick());
 			}
 
 			return CONTINUE;
@@ -1100,11 +1097,8 @@ class CPushMod : public CModule
 			if (notify_channel(nick, channel, message))
 			{
 				CString title = "Highlight";
-				CString msg = channel.GetName();
-				msg += ": " + nick.GetNick();
-				msg += " " + message;
 
-				send_message(msg, title, channel.GetName());
+				send_message(message, title, channel.GetName(), nick.GetNick());
 			}
 
 			return CONTINUE;
@@ -1121,10 +1115,8 @@ class CPushMod : public CModule
 			if (notify_pm(nick, message))
 			{
 				CString title = "Private Message";
-				CString msg = "From " + nick.GetNick();
-				msg += ": " + message;
 
-				send_message(msg, title, nick.GetNick());
+				send_message(message, title, nick.GetNick(), CString(""));
 			}
 
 			return CONTINUE;
@@ -1140,11 +1132,9 @@ class CPushMod : public CModule
 		{
 			if (notify_pm(nick, message))
 			{
-				CString title = "Private Message";
-				CString msg = "* " + nick.GetNick();
-				msg += " " + message;
+				CString title = "Private Message Action";
 
-				send_message(msg, title, nick.GetNick());
+				send_message(message, title, nick.GetNick(), CString(""));
 			}
 
 			return CONTINUE;
